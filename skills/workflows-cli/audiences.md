@@ -1,0 +1,121 @@
+# Audiences in workflows
+
+How Audiences shows up while building a workflow: writing records with
+`upsert-audiences-record`, and triggering a workflow off an audience.
+
+For everything else about Audiences — creating and editing audiences (saved
+segments), managing field definitions, reading and counting records, and writing
+filter ASTs — use the **`audiences` skill**. Do not rediscover the `clay audiences`
+CLI here.
+
+**Read with the CLI, write records with the action.** `clay audiences` has no
+command that writes a field value onto a record, so any workflow step that
+populates people or companies uses the action below.
+
+## The backfill shape: audience → enrich → upsert back
+
+This is the standard answer when a field the user wants is missing or sparse on
+their records, and the most common reason to build a workflow over Audiences:
+
+1. **Save an audience of the records that need the field** — an `Empty` filter on
+   it, via `clay audiences create`. That audience is the work queue, and it drains
+   itself as records get filled.
+2. **Trigger the workflow on that audience** (`audience_segment`, below).
+3. **Enrich** in a tool node.
+4. **Write the result back** with `upsert-audiences-record`, looking the record up
+   by `email` / `linkedin_url` (people) or `domain` (companies).
+
+Lead with the count from `clay audiences records search-count` so the user can
+see the size and likely cost. You may build the reversible draft incrementally
+while details are still being refined, but get confirmation before starting a
+credit-consuming backfill or publishing the workflow.
+
+Before proposing it, confirm the data really is missing: read the existing field
+first (see the `audiences` skill's `answering-data-questions.md`). A workflow that
+re-enriches data the workspace already has spends credits for nothing.
+
+## The ingest shape: search → upsert workflow → routine
+
+This file owns **building** the upsert workflow. The **`routines` skill** owns
+**running** it in bulk over Search results.
+
+Use this when the user wants net-new people or companies from Clay's GTM database
+**kept in Audiences** — not just enriched and discarded:
+
+1. **Use the `search` skill** to find the records and learn real field names
+   (`email`, `linkedin_url`, `domain`, etc.) from Search results — do not invent
+   JSON paths.
+2. **Build a workflow that upserts one record per run.** Routine items are the
+   batch. Trigger is `manual` or `webhook`, **not** `audience_segment` — these
+   records are not in an audience yet.
+3. **Add a tool node** with `upsert-audiences-record` (see below for
+   `actionKey` / `actionPackageId`). Bind lookup keys from the search item;
+   record fields from `clay audiences fields list`.
+4. **Expose it as a routine:**
+   `clay routines create workflow <workflowId> --name "…"`. Then hand off to the
+   **`routines` skill** to run it in bulk over Search results.
+5. **If they then want ongoing automation** on those records, save an audience
+   and switch to the backfill shape above (`audience_segment` trigger).
+
+Do not use list mode or `clay workflows runs test` as the bulk upload path.
+
+## Triggering a workflow off an audience
+
+An `audience_segment` trigger's `segmentId` is the audience id from
+`clay audiences list` or `clay audiences create`. Its `entityType` is `CONTACT` /
+`ACCOUNT` — **not** the `people` / `companies` vocabulary the CLI flags use.
+
+To backfill existing members through the workflow, see `testing.md`
+(`clay workflows runs test <workflowId> --audience-segment <segmentId> --limit N`).
+
+## upsert-audiences-record
+
+This is the way to update Audiences records. Creates or updates a contact or account via `inputMappingConfig`. The config is a flat object with pipe-namespaced keys (`<group>|<fieldId>`) — never dot-notation, never nested.
+
+When attaching this action to a tool node, use:
+
+- `actionKey: "upsert-audiences-record"`
+- `actionPackageId: "b1ab3d5d-b0db-4b30-9251-3f32d8b103c1"`
+
+### Lookup vs record fields
+
+- **Lookup fields** are the keys used to find an existing audience record. For contacts these are fixed (`email`, `linkedin_url`, `phone`); for accounts (`domain`, `linkedin_url`). The values you pass under `lookupFields|<id>` are matched against existing records — if any match, the record is updated; otherwise a new one is created.
+- **Record fields** are the data written onto the matched (or newly created) record. These are workspace-defined and vary per workspace; call `clay audiences fields list` with `--entity-type people` or `--entity-type companies` to discover the available ids.
+
+### Required keys
+
+- `entityType` (static) — `"ACCOUNT"` or `"CONTACT"`.
+- `lookupFields|selectedLookupFields` (static array) — lookup-key field ids.
+- `lookupFields|<id>` for every id above — value to match on.
+- `recordFields|selectedRecordFields` (static array) — fields to write.
+- `recordFields|<id>` for every id above — value to write.
+- `recordFields|removeNullValues` (static bool) — `true` skips blanks; `false` overwrites with them.
+
+Every id in a `selected*` array MUST have a matching `<group>|<id>` binding, or the action returns `ERROR_BAD_REQUEST`.
+
+### Discover real field IDs
+
+Run `clay audiences fields list` with `--entity-type people` or `--entity-type companies` first — schema ids and English names often differ (account "company name" is `org_name`). It returns the workspace's record field catalog; lookup keys are fixed (CONTACT → `email`, `linkedin_url`, `phone`; ACCOUNT → `domain`, `linkedin_url`).
+
+### Worked example — account upsert
+
+```json
+{
+  "entityType": { "type": "static", "value": "ACCOUNT" },
+  "lookupFields|selectedLookupFields": {
+    "type": "static",
+    "value": ["domain"]
+  },
+  "lookupFields|domain": { "type": "reference", "expression": "{{domain}}" },
+  "recordFields|selectedRecordFields": {
+    "type": "static",
+    "value": ["org_name", "domain"]
+  },
+  "recordFields|org_name": {
+    "type": "reference",
+    "expression": "{{org_name}}"
+  },
+  "recordFields|domain": { "type": "reference", "expression": "{{domain}}" },
+  "recordFields|removeNullValues": { "type": "static", "value": true }
+}
+```

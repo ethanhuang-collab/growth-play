@@ -1,0 +1,4 @@
+interface:
+  display_name: "Quality Control"
+  short_description: "Bundle review, tests, visual QA, security checks, and subagent passes."
+  default_prompt: "Use $qc to run a final quality pass. Bundle code review, test/coverage checks, visual QA, security review when relevant, repo-native verification, and automatic read-only subagents for non-trivial QC."

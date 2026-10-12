@@ -1,0 +1,20 @@
+{
+  "title": "Closed-Lost Re-Heat",
+  "go_live": "[Date]",
+  "who": [
+    {"label": "Account", "text": "Closed-lost accounts with >90 days lapse"},
+    {"label": "Motion", "text": "Tier 1/2 is manual; Tier 3 is automatic"},
+    {"label": "Person", "text": "Most active user in the primary workspace"},
+    {"label": "Gate", "text": "No GTME, GS, or FDE touch in past 30 days, not in campaign, and no open opportunity"}
+  ],
+  "talk": [
+    "Hi this is x reaching out from Clay–do either of those sound familiar to you?",
+    "Your team has been considering Clay in the past. We went over a bunch of great features that I think would be really relevant to your day-to-day. I sent you an email about xyz features, is this at all relevant to you?",
+    "[ask 1-2 follow-up discovery questions]",
+    "Great! Would love to get some time to directly show you what this could look like! Just so we can make the most out of our time, is there anything in particular you would like to see from the demo around [try to give some structured guidance]."
+  ],
+  "considerations": [
+    "May be different department vs. prev. Clay valuator",
+    "Avoid directly stating the outcome of the conversation unless asked → if asked, mention new features we have released since, would love re-engage"
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Clay Formulas"
+  short_description: "Write and debug Clay formula columns."
+  default_prompt: "Use $clay-formulas to write or debug this Clay formula with sandbox-safe JavaScript, defensive null handling, and sample-row validation."

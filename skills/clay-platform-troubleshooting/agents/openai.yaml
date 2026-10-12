@@ -1,0 +1,4 @@
+interface:
+  display_name: "Clay Platform Troubleshooting"
+  short_description: "Diagnose Clay workflow operations, credits, waterfalls, Claygent runs, syncs, webhooks, and plan gates."
+  default_prompt: "Use $clay-platform-troubleshooting to diagnose this Clay workflow issue, contain credit and write risk, test a small row sample, and recommend the smallest durable fix."

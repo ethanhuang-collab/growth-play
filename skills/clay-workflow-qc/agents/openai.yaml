@@ -1,0 +1,4 @@
+interface:
+  display_name: "Clay Workflow QC"
+  short_description: "Inspect Clay graph wiring, contracts, and side-effect gates."
+  default_prompt: "Use $clay-workflow-qc for one read-only independent review of the specified candidate. Follow its project contract and report evidence, findings and unknowns without executing or changing the workflow."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Growth Play Notion"
+  short_description: "Write the internal growth-play one-pager"
+  default_prompt: "Use $growth-play-notion to write the internal Notion one-pager for this finished growth play."

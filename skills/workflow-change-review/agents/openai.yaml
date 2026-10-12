@@ -1,0 +1,4 @@
+interface:
+  display_name: "Workflow Change Review"
+  short_description: "Review node changes, numbering, and layout impacts"
+  default_prompt: "Use $workflow-change-review to trace this workflow change, preview affected names, and identify the checks and confirmation needed."

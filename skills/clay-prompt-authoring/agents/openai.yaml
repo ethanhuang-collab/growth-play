@@ -1,0 +1,4 @@
+interface:
+  display_name: "Clay Prompt Authoring"
+  short_description: "Author and QA production Clay Use AI and Claygent prompts."
+  default_prompt: "Use $clay-prompt-authoring to draft or debug a Clay prompt with chip-agnostic inputs, hard gates, JSON Schema embedded in OUTPUT FORMAT, and sample-row tests."

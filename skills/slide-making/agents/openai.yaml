@@ -1,0 +1,4 @@
+interface:
+  display_name: "Slide Making"
+  short_description: "Professional slide deck design — layout consistency, alignment, box sizing, typography"
+  default_prompt: "Apply slide design principles to this deck"

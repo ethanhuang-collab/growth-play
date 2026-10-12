@@ -1,0 +1,4 @@
+interface:
+  display_name: "Clay Quality Assessment"
+  short_description: "Create client-facing Clay QA documents with fill rates and credit-cost rollups."
+  default_prompt: "Create a branded Clay quality assessment from the CSV export, condensed schema, and SOW. Keep costs only in the final coverage table."

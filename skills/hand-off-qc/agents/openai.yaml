@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hand-off QC"
+  short_description: "De-dupe and source-check a post-call hand-off packet"
+  default_prompt: "Use $hand-off-qc to audit a drafted Slack hand-off and Salesforce notes against the Gong transcript: cut repeated facts, flag unsupported claims, enforce the hand-off shape."

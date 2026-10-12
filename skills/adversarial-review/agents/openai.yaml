@@ -1,0 +1,4 @@
+interface:
+  display_name: "Adversarial Review"
+  short_description: "Independent adversaries attack an artifact; a judge on another model verifies and ranks."
+  default_prompt: "Use $adversarial-review on this artifact. Pick the mode (design-review, output-qc, or critic), spawn independent read-only lanes with distinct lenses, run a judge on a different model family that re-reads the primary source for every ranked finding, and write one short review doc with ranked actions, contradictions, and what both missed."

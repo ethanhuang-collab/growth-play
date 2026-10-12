@@ -1,0 +1,4 @@
+interface:
+  display_name: "Workflow Node Graph"
+  short_description: "Precise workflow/DAG node graphs: annotated swimlane poster or compact pipeline view."
+  default_prompt: "Build or review a workflow node graph. Pick a view mode (annotated-poster or compact-dag), render it from node/flow/loop registry arrays with measured node heights and explicit z-order, apply lane, loop, shape and tag-honesty rules, then export a single-page vector PDF plus zoomed crops and read the crops back."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Play QC"
+  short_description: "Review targeting, play logic, messaging, and activation risks."
+  default_prompt: "Use $gtm-play-qc for one read-only independent review of the specified candidate. Follow its project contract and report evidence, findings and unknowns without executing or changing the workflow."

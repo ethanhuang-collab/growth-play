@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Workflow poster template — annotated mode</title>
+<style>
+  /* ------------------------------------------------------------------
+     ANNOTATED POSTER MODE. Registry-driven: edit NODES / LANES / FLOW /
+     VFLOW / LOOPS at the bottom, never the markup. Layer order is load
+     bearing: lanes 0, wires 1, nodes 2, floating labels 3.
+     ------------------------------------------------------------------ */
+  :root{--line:#8f8f8f;--soft:#c9c9c9;--ink:#1c1c1c;--muted:#7c7c7c}
+  *{box-sizing:border-box}
+  body{margin:0;padding:0;background:#dcdcdc;color:var(--ink);
+       font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .poster{margin:0 auto;background:#fff;border:1px solid #8a8a8a;padding:28px 32px 24px}
+  h1{font-size:22px;margin:0 0 6px}
+  .sub{font-size:12px;color:var(--muted);margin:0 0 20px;line-height:1.5}
+
+  #canvas{position:relative}
+  svg.wires{position:absolute;inset:0;overflow:visible;pointer-events:none;z-index:1}
+
+  /* ---- swimlanes (z 0) ---- */
+  .lane{position:absolute;left:0;border-top:1px dotted #9a9a9a;border-bottom:1px dotted #9a9a9a;
+        z-index:0}
+  .lane.shared{background:#f5f5f4}
+  .lanelbl{position:absolute;z-index:3;font-size:11px;letter-spacing:.12em;color:#2b2b2b;
+           width:150px;line-height:1.45;border-left:3px solid #8f8f8f;padding-left:9px}
+  .lanelbl.sh{font-weight:700}
+  .lanelbl i{display:block;font-style:normal;font-size:9px;letter-spacing:.06em;color:#8a8a8a;
+             margin-top:3px}
+
+  .brace{position:absolute;border:1px dotted #8f8f8f;border-radius:3px;z-index:0;background:#fff}
+  .bracelbl{position:absolute;z-index:3;font-size:10px;letter-spacing:.1em;color:#555;
+            background:#fff;padding:1px 7px}
+
+  /* ---- nodes (z 2) ---- */
+  .node{position:absolute;background:#fff;border:1px solid var(--line);border-radius:3px;
+        padding:9px 11px 10px;z-index:2}
+  .node .step{font-size:8.5px;letter-spacing:.1em;color:var(--muted);margin-bottom:4px}
+  .node .ttl{font-size:13px;line-height:1.3;font-weight:700}
+  .node .sb{font-size:9.5px;color:#5a5a5a;margin-top:4px;line-height:1.35}
+  .node ul{margin:8px 0 0;padding:0;list-style:none}
+  .node li{font-size:9.5px;line-height:1.55;display:flex;gap:6px;align-items:baseline;color:#444}
+  .k{font-size:7.5px;border:1px solid var(--soft);background:#fafafa;padding:0 3px;color:#555;
+     flex:none;min-width:32px;text-align:center}
+  .k.llm{background:#333;border-color:#333;color:#fff;font-weight:700}
+
+  /* border semantics — declare every one of these in the footer legend */
+  .node.trigger{border-left:4px solid #2b2b2b}   /* fires on its own      */
+  .node.svc{border-style:dashed}                 /* shared service        */
+  .node.merge{border:2px solid #3a3a3a}          /* lanes converge here   */
+  .node.pass{border:1px dotted #7c7c7c;background:#fbfbfb} /* off-path     */
+  .node.end{border:2px solid #1c1c1c;background:#1c1c1c;color:#fff} /* terminal */
+  .node.end .ttl{font-size:15px}
+  .node.end .sb{color:#c9c9c9}
+  .node.end .step{color:#a6a6a6}
+
+  .shapelbl{position:absolute;z-index:3;font-size:9px;letter-spacing:.06em;text-align:center;
+            color:#1c1c1c;line-height:1.25}
+
+  .foot{display:flex;gap:26px;flex-wrap:wrap;font-size:11px;color:#555;margin-top:18px;
+        border-top:1px solid var(--soft);padding-top:12px;align-items:center}
+  .lg{display:flex;align-items:center;gap:7px}
+  .sw{width:24px;height:14px;border:1px solid var(--line);background:#fff;border-radius:2px}
+  .sw.t{border-left:4px solid #2b2b2b} .sw.s{border-style:dashed}
+  .wf{margin-top:10px;font-size:9px;color:#bbb;letter-spacing:.12em}
+
+  @media print{ body{background:#fff} .poster{border:none;margin:0} }
+  /* @page size is injected by the script from the measured poster box —
+     do not hard-code it, it goes stale the moment a node is added. */
+</style>
+</head>
+<body>
+<div class="poster" id="poster">
+  <h1>Workflow poster template</h1>
+  <p class="sub">
+    Replace this deck with the one-paragraph reading instruction: what a lane means, what the
+    spine is, and what dashed wires mean. Two origination lanes drop into a shared lane for the
+    identical middle, come back up for the work only they do, then converge again.
+  </p>
+
+  <div id="canvas"></div>
+
+  <!-- LEGEND: every entry below must correspond to a shape/border/tag actually
+       used above, and every tag used above must appear below. Stale entries
+       are a defect. -->
+  <div class="foot">
+    <div class="lg"><span class="sw t"></span>trigger — fires on its own</div>
+    <div class="lg"><span class="sw"></span>node</div>
+    <div class="lg"><span class="sw s"></span>shared service</div>
+    <div class="lg"><svg width="26" height="17"><polygon points="13,2 24,15 2,15" fill="#fff" stroke="#1c1c1c" stroke-width="1.5"/></svg>review</div>
+    <div class="lg"><svg width="26" height="19"><polygon points="13,2 24,10 13,18 2,10" fill="#fff" stroke="#1c1c1c" stroke-width="1.8"/></svg>approval gate</div>
+    <div class="lg"><span class="k">api</span>a named outside system we call</div>
+    <div class="lg"><span class="k">ours</span>something we build and own</div>
+    <div class="lg"><span class="k llm">llm</span>a model or skill does the drafting</div>
+    <div class="lg"><span class="k">cron</span>runs on a clock, nobody starts it</div>
+    <div class="lg"><span class="k">port</span>capability needed, vendor not chosen yet</div>
+  </div>
+  <div class="wf">TEMPLATE — replace this strip with the scope caveat: what this view deliberately stops short of</div>
+</div>
+
+<script>
+/* =======================================================================
+   1. REGISTRY. The only thing you edit for a new diagram.
+   ======================================================================= */
+
+/* every node x is shifted right by GUTTER so lane labels never collide
+   with the first node column */
+const GUTTER = 160;
+const NODE_W = 214;
+
+/* kind: trigger | node | svc | merge | pass | end | review | approve
+   ex:   [tagVocabulary, "specific system — object being touched"]
+   review/approve carry explicit w/h because they are SVG polygons, not divs */
+const NODES = [
+  /* ---- lane A ---- */
+  {id:'a0', x:60,   y:70,  kind:'trigger', step:'START', ttl:'Request arrives\non channel A',
+   ex:[['api','inbox vendor — messages']]},
+  {id:'a1', x:1430, y:70,  kind:'node', step:'ACCESS · A', ttl:'Reply and open\nthe workspace',
+   ex:[['api','inbox vendor — drafts'],['api','crm — stage']]},
+
+  /* ---- lane B ---- */
+  {id:'b0', x:60,   y:250, kind:'trigger', step:'START · CLOCK', ttl:'Weekly batch pull',
+   sb:'same screen, nobody starts it',
+   ex:[['cron','every monday'],['port','market data — screen']]},
+  {id:'b1', x:1430, y:250, kind:'node', step:'ACCESS · B', ttl:'Queue for\noutreach',
+   ex:[['api','crm — owner']]},
+
+  /* ---- shared lane: the spine both lanes run ---- */
+  {id:'s1', x:400,  y:410, kind:'svc',  step:'SHARED · 1', ttl:'Match against\nwhat we already have',
+   ex:[['api','crm — history'],['ours','name → entity match']]},
+  {id:'s2', x:660,  y:410, kind:'node', step:'SHARED · 2', ttl:'Refresh the\nfacts',
+   sb:'this is the step the loop re-runs',
+   ex:[['port','market data — metrics']]},
+  {id:'r1', x:920,  y:466, kind:'review',  w:72, h:62, ttl:'HUMAN\nREVIEW'},
+  {id:'s3', x:1024, y:410, kind:'node', step:'SHARED · 3', ttl:'Draft the\nsummary',
+   ex:[['llm','summary skill']]},
+  {id:'g1', x:1270, y:453, kind:'approve', w:94, h:88, ttl:'APPROVAL\nGATE'},
+
+  /* off-path branch */
+  {id:'x1', x:1024, y:640, kind:'pass', step:'ON A NO', ttl:'Record the reason\nand close it',
+   ex:[['api','crm — stage']]},
+
+  /* ---- shared lane: converge ---- */
+  {id:'m1', x:1700, y:410, kind:'merge', step:'BOTH LANES CONVERGE', ttl:'Log the outcome',
+   ex:[['ours','outcome ledger']]},
+  {id:'end',x:1960, y:414, kind:'end',   step:'END OF THIS VIEW', ttl:'Delivered',
+   sb:'everything after this is out of scope here'}
+];
+
+/* Shared work gets its OWN lane. Never park it inside one origination lane —
+   that reads as a factual claim that the work belongs to that lane. */
+const LANES = [
+  {name:'LANE A —<br>INBOUND',  sub:'it came to us',        members:['a0','a1']},
+  {name:'LANE B —<br>SOURCED',  sub:'we went and found it', members:['b0','b1']},
+  {name:'SHARED',               sub:'both lanes, same steps', shared:true,
+   members:['s1','s2','r1','s3','g1','x1','m1','end'], extraBottom:70}
+];
+
+/* forward flow — solid */
+const FLOW = [
+  ['a0','s1'],['b0','s1'],
+  ['s1','s2'],['s2','r1'],['r1','s3'],['s3','g1'],
+  ['g1','a1'],['g1','b1'],
+  ['a1','m1'],['b1','m1'],
+  ['m1','end']
+];
+
+/* vertical branch drops: [from, to, label, elbowY] — dashed */
+const VFLOW = [
+  ['g1','x1','on a no', 612]
+];
+
+/* loops — dashed, lighter.
+   style 'arc'    : tight two-arrow cycle for ADJACENT nodes (reads as one loop)
+   style 'bottom' : long return routed along the bottom edge
+   style 'left'   : long return routed down, left, and back into the left port
+   routeY: number | null (auto, just below both nodes) | 'below' (canvas floor) */
+const LOOPS = [
+  ['s2','s1','re-run when the facts move', null, 'arc'],
+  ['x1','b0','revisit trigger fires', 'below', 'bottom']
+];
+
+/* =======================================================================
+   2. RENDER. Generic — you should not need to edit below this line.
+   ======================================================================= */
+const canvas = document.getElementById('canvas');
+const NS='http://www.w3.org/2000/svg';
+const svg=document.createElementNS(NS,'svg');
+svg.setAttribute('class','wires'); canvas.appendChild(svg);
+
+const box={};
+for(const n of NODES) n.x += GUTTER;
+
+/* Heights are MEASURED, never guessed: wire endpoints depend on the real
+   rendered height, and estimating it detaches arrows from nodes. */
+for(const n of NODES){
+  if(n.kind==='review'||n.kind==='approve'){ box[n.id]={x:n.x,y:n.y,w:n.w,h:n.h,shape:1}; continue; }
+  const el=document.createElement('div');
+  el.className='node '+n.kind;
+  Object.assign(el.style,{left:n.x+'px',top:n.y+'px',width:NODE_W+'px'});
+  el.innerHTML =
+    `<div class="step">${n.step}</div>`+
+    `<div class="ttl">${n.ttl.replace(/\n/g,'<br>')}</div>`+
+    (n.sb?`<div class="sb">${n.sb}</div>`:'')+
+    (n.ex?`<ul>${n.ex.map(([k,t])=>`<li><span class="k${k==='llm'?' llm':''}">${k}</span>${t}</li>`).join('')}</ul>`:'');
+  canvas.appendChild(el);
+  box[n.id]={x:n.x,y:n.y,w:NODE_W,h:el.offsetHeight};   /* <-- offsetHeight, after insertion */
+}
+
+/* lane bands sized to whatever they actually contain */
+const PAD=22;
+let bottomMost=0, rightMost=0;
+for(const L of LANES){
+  let top=1e9, bot=-1e9;
+  for(const id of L.members){
+    const b=box[id];
+    top=Math.min(top,b.y);
+    bot=Math.max(bot, b.y+b.h + (b.shape?34:0));   /* polygons carry a label underneath */
+  }
+  L.y=top-PAD; L.h=(bot+PAD+(L.extraBottom||0))-L.y;
+  bottomMost=Math.max(bottomMost,L.y+L.h);
+}
+for(const id in box) rightMost=Math.max(rightMost, box[id].x+box[id].w);
+
+const W=rightMost+40, H=bottomMost+20;
+Object.assign(canvas.style,{width:W+'px',height:H+'px'});
+svg.setAttribute('width',W); svg.setAttribute('height',H);
+
+/* the poster is sized from the content, not the viewport — otherwise the
+   page-size math below measures the browser window instead of the graph */
+document.getElementById('poster').style.width=(W+66)+'px';   /* 32px padding + 1px border, both sides */
+
+for(const L of LANES){
+  const d=document.createElement('div');
+  d.className='lane'+(L.shared?' shared':'');
+  Object.assign(d.style,{top:L.y+'px',height:L.h+'px',width:W+'px'});
+  canvas.appendChild(d);
+  const l=document.createElement('div');
+  l.className='lanelbl'+(L.shared?' sh':'');
+  l.innerHTML=L.name+(L.sub?`<i>${L.sub}</i>`:'');
+  canvas.appendChild(l);
+  Object.assign(l.style,{left:'0px',top:(L.y + (L.h-l.offsetHeight)/2)+'px'});
+}
+
+/* optional brace calling out the stretch every lane shares */
+{
+  const a=box.s1, z=box.g1;
+  const x=a.x-16, w=(z.x+z.w+16)-x, y=a.y-14, h=(box.s2.y+box.s2.h+10)-y;
+  const b=document.createElement('div'); b.className='brace';
+  Object.assign(b.style,{left:x+'px',top:y+'px',width:w+'px',height:h+'px'});
+  canvas.appendChild(b);
+  const l=document.createElement('div'); l.className='bracelbl';
+  l.textContent='EVERY LANE RUNS THIS SAME MIDDLE';
+  Object.assign(l.style,{left:(x+18)+'px',top:(y-7)+'px'}); canvas.appendChild(l);
+}
+
+/* shape semantics: triangle = human review, diamond = approval gate */
+function shape(n){
+  const b=box[n.id];
+  const p=document.createElementNS(NS,'polygon');
+  p.setAttribute('points', n.kind==='review'
+    ? `${b.x+b.w/2},${b.y} ${b.x+b.w},${b.y+b.h} ${b.x},${b.y+b.h}`
+    : `${b.x+b.w/2},${b.y} ${b.x+b.w},${b.y+b.h/2} ${b.x+b.w/2},${b.y+b.h} ${b.x},${b.y+b.h/2}`);
+  p.setAttribute('fill','#fff'); p.setAttribute('stroke','#1c1c1c');
+  p.setAttribute('stroke-width', n.kind==='approve'?2:1.5);
+  svg.appendChild(p);
+  const l=document.createElement('div'); l.className='shapelbl';
+  l.innerHTML=n.ttl.replace('\n','<br>');
+  Object.assign(l.style,{left:(b.x-30)+'px',top:(b.y+b.h+6)+'px',width:(b.w+60)+'px'});
+  canvas.appendChild(l);
+}
+NODES.filter(n=>n.kind==='review'||n.kind==='approve').forEach(shape);
+
+/* wires */
+const defs=document.createElementNS(NS,'defs');
+defs.innerHTML=
+ `<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#5f5f5f"/></marker>
+  <marker id="arl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#9a9a9a"/></marker>`;
+svg.insertBefore(defs,svg.firstChild);
+
+/* solid + dark = forward progression; dashed + light = repetition.
+   from/to are stamped onto the element so the audits below can tell an
+   endpoint node from an obstacle it is illegally crossing. */
+function path(d,dashed,from,to){
+  const p=document.createElementNS(NS,'path');
+  p.setAttribute('d',d); p.setAttribute('fill','none');
+  p.setAttribute('stroke',dashed?'#a0a0a0':'#5f5f5f');
+  p.setAttribute('stroke-width',dashed?1:1.5);
+  if(dashed) p.setAttribute('stroke-dasharray','5 4');
+  p.setAttribute('marker-end',dashed?'url(#arl)':'url(#ar)');
+  if(from) p.dataset.from=from;
+  if(to)   p.dataset.to=to;
+  svg.appendChild(p);
+}
+
+/* every wire label masks the wire beneath it with a rect sized from its own
+   getBBox — a label sitting directly on a stroke is unreadable */
+function label(x,y,text,anchor){
+  const t=document.createElementNS(NS,'text');
+  t.setAttribute('x',x); t.setAttribute('y',y);
+  t.setAttribute('text-anchor',anchor||'middle');
+  t.setAttribute('font-size','10'); t.setAttribute('fill','#666');
+  t.setAttribute('font-family','ui-monospace,Menlo,monospace');
+  t.setAttribute('font-style','italic'); t.textContent=text;
+  const bg=document.createElementNS(NS,'rect'); svg.appendChild(bg); svg.appendChild(t);
+  const bb=t.getBBox();
+  bg.setAttribute('x',bb.x-5); bg.setAttribute('y',bb.y-2);
+  bg.setAttribute('width',bb.width+10); bg.setAttribute('height',bb.height+4);
+  bg.setAttribute('fill','#fff');
+}
+
+for(const [f,t] of FLOW){
+  const A=box[f],B=box[t];
+  const x1=A.x+A.w+3,y1=A.y+A.h/2,x2=B.x-7,y2=B.y+B.h/2;
+  const dx=Math.max(34,(x2-x1)/2);
+  path(`M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`,false,f,t);
+}
+for(const [f,t,lbl,elbowY] of VFLOW){
+  const A=box[f],B=box[t];
+  const ax=A.x+A.w/2, bx=B.x+B.w/2;
+  path(`M${ax},${A.y+A.h+3} V${elbowY} H${bx} V${B.y-7}`,true,f,t);
+  label((ax+bx)/2, elbowY-7, lbl);
+}
+for(const [f,t,lbl,routeY,side] of LOOPS){
+  const A=box[f],B=box[t];
+  const ax=A.x+A.w/2, bx=B.x+B.w/2;
+  const ry = routeY==='below' ? bottomMost-26
+           : (routeY ?? Math.max(A.y+A.h,B.y+B.h)+38);
+  if(side==='arc'){
+    /* tight return arc tucked under both nodes, so the pair reads as one
+       closed cycle. A long detour to the bottom of the sheet does not. */
+    const dip=Math.max(A.y+A.h,B.y+B.h)+48;
+    const sx=A.x+40, ex=B.x+B.w-40;
+    path(`M${sx},${A.y+A.h+3} C${sx},${dip} ${ex},${dip} ${ex},${B.y+B.h+4}`,true,f,t);
+    label((sx+ex)/2, dip+16, lbl);
+  } else if(side==='left'){
+    const lx=B.x-34;
+    path(`M${ax},${A.y+A.h+3} V${ry} H${lx} V${B.y+B.h/2} H${B.x-7}`,true,f,t);
+    label((ax+lx)/2, ry-7, lbl);
+  } else {
+    path(`M${ax},${A.y+A.h+3} V${ry} H${bx} V${B.y+B.h+4}`,true,f,t);
+    if(lbl) label((ax+bx)/2, ry-7, lbl);
+  }
+}
+
+/* =======================================================================
+   2b. RENDERED ROUTING AUDITS. The eye cannot be trusted here: the node
+   layer paints over wires, so a connector running straight through a card
+   looks perfectly clean in the full-poster view and only shows up in a 1:1
+   crop. These sample the paths as actually rendered and publish counts onto
+   the poster element, so headless QA can assert them without screenshots.
+   Both must report 0. A nonzero count is a layout bug — reflow or add
+   waypoints; do not overrule it by looking at the picture.
+   ======================================================================= */
+
+/* only tagged wires are audited, which also skips the arrowhead marker defs */
+const wires=()=>[...svg.querySelectorAll('path[data-from]')];
+const isEndpoint=(p,id)=>p.dataset.from===id||p.dataset.to===id;
+
+/* wire-vs-node: a connector may touch only its own source and destination */
+function auditWireNodeCollisions(clearance=8){
+  const obstacles=Object.entries(box).map(([id,b])=>({
+    id, left:b.x-clearance, right:b.x+b.w+clearance,
+    top:b.y-clearance,      bottom:b.y+b.h+clearance
+  }));
+  const collisions=[];
+  for(const p of wires()){
+    const len=p.getTotalLength();
+    for(const o of obstacles){
+      if(isEndpoint(p,o.id)) continue;
+      for(let at=0;at<=len;at+=4){
+        const pt=p.getPointAtLength(at);
+        if(pt.x>=o.left&&pt.x<=o.right&&pt.y>=o.top&&pt.y<=o.bottom){
+          collisions.push({edge:`${p.dataset.from}->${p.dataset.to}`,node:o.id});
+          break;
+        }
+      }
+    }
+  }
+  poster.dataset.wireCollisions=String(collisions.length);
+  window.__wireAudit={...(window.__wireAudit||{}),clearance,collisions};
+  if(collisions.length) console.warn('Wire/node collisions',collisions);
+}
+
+/* wire-vs-wire: a shared source is not permission to tangle after the port,
+   so only a genuinely coincident endpoint is tolerated */
+function auditWireCrossings(sampleStep=4,endpointTolerance=12){
+  const sampled=wires().map(p=>{
+    const len=p.getTotalLength(), pts=[];
+    for(let at=0;at<len;at+=sampleStep) pts.push(p.getPointAtLength(at));
+    pts.push(p.getPointAtLength(len));
+    return {p,pts};
+  });
+  const cross=(a,b,c,d)=>{
+    const r={x:b.x-a.x,y:b.y-a.y}, s={x:d.x-c.x,y:d.y-c.y};
+    const den=r.x*s.y-r.y*s.x;
+    if(Math.abs(den)<1e-4) return null;
+    const del={x:c.x-a.x,y:c.y-a.y};
+    const t=(del.x*s.y-del.y*s.x)/den, u=(del.x*r.y-del.y*r.x)/den;
+    if(t<0||t>1||u<0||u>1) return null;
+    return {x:a.x+t*r.x,y:a.y+t*r.y};
+  };
+  const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const crossings=[];
+  for(let i=0;i<sampled.length;i+=1){
+    for(let j=i+1;j<sampled.length;j+=1){
+      const A=sampled[i], B=sampled[j];
+      const shared=[];
+      for(const a of [A.pts[0],A.pts[A.pts.length-1]])
+        for(const b of [B.pts[0],B.pts[B.pts.length-1]])
+          if(dist(a,b)<1) shared.push(a);
+      let hit=null;
+      for(let a=0;a<A.pts.length-1&&!hit;a+=1){
+        for(let b=0;b<B.pts.length-1;b+=1){
+          const pt=cross(A.pts[a],A.pts[a+1],B.pts[b],B.pts[b+1]);
+          if(!pt) continue;
+          if(shared.some(e=>dist(pt,e)<=endpointTolerance)) continue;
+          hit=pt; break;
+        }
+      }
+      if(hit) crossings.push({
+        edges:[`${A.p.dataset.from}->${A.p.dataset.to}`,
+               `${B.p.dataset.from}->${B.p.dataset.to}`],
+        point:{x:Math.round(hit.x),y:Math.round(hit.y)}
+      });
+    }
+  }
+  poster.dataset.wireCrossings=String(crossings.length);
+  poster.dataset.wireCrossingEdges=crossings.map(c=>c.edges.join('×')).join('|');
+  window.__wireAudit={...(window.__wireAudit||{}),sampleStep,crossings};
+  if(crossings.length) console.warn('Wire/wire crossings',crossings);
+}
+
+/* =======================================================================
+   3. PAGE SIZE. Derived from the measured poster box so one --print-to-pdf
+   run yields exactly one page. Never hard-code inches: adding a node shifts
+   every downstream column and silently spills onto page 2.
+   ======================================================================= */
+const poster=document.getElementById('poster');
+const pw=Math.ceil(poster.offsetWidth)/96 + 0.04;
+const ph=Math.ceil(poster.offsetHeight)/96 + 0.04;
+const ps=document.createElement('style');
+ps.textContent=`@media print{@page{size:${pw.toFixed(2)}in ${ph.toFixed(2)}in;margin:0}}`;
+document.head.appendChild(ps);
+/* read back by the verification script */
+window.__poster={widthPx:poster.offsetWidth,heightPx:poster.offsetHeight,pageIn:[pw,ph]};
+
+/* run last: the audits publish data-wire-collisions / data-wire-crossings
+   on #poster, and both must read "0" before the graph ships */
+auditWireNodeCollisions();
+auditWireCrossings();
+</script>
+</body>
+</html>
