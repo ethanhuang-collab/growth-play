@@ -93,7 +93,6 @@ def load_spec(path):
         "title": title,
         "go_live": go_live,
         "who": who,
-        "why": why,
         "talk": talk,
         "considerations": considerations,
     }
